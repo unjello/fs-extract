@@ -1,0 +1,49 @@
+#!/usr/bin/env ruby
+#/ Usage: fs-extract [options]...
+#/ -i, --input=DIR     Directory to monitor
+#/ -o, --output=DIR    Directory to extract files to
+#/ -n, --numbering=N   Begin numbering at N
+#/ -p, --prefix=S      Prefix extracted files with S
+#/ -e, --ext=E         Add extension
+#/ -v, --verbose
+#/ -h, --help
+$stderr.sync = true
+require 'optparse'
+require 'Listen'
+require 'FileUtils'
+
+directory_in = ENV['FS_EXTRACT']
+directory_out = File.dirname(__FILE__)
+numbering = 1
+verbose = false
+prefix = "Extracted"
+ext = nil
+
+def help() exec "grep ^#/<'#{__FILE__}'|cut -c4-" end
+ARGV.options do |opts|
+  opts.on("-v", "--verbose")              { verbose = true }
+  opts.on("-i", "--input=dir", String)    { |val| directory_in = val }
+  opts.on("-o", "--output=dir", String)   { |val| directory_out = val }
+  opts.on("-n", "--numbering=n", Integer) { |val| numbering = val }
+  opts.on("-p", "--prefix=p", String)     { |val| prefix = val.gsub(/[^0-9A-z.\-]/, '_') }
+  opts.on("-e", "--ext=e", String)        { |val| ext = val }
+  opts.on_tail("-h", "--help")            { help() }
+  opts.parse!
+end
+
+help() if directory_in.nil?
+
+puts "Starting numbering at #{numbering};" if verbose and numbering > 1
+puts "Forcing #{ext} extension;" if verbose and ext
+puts "Monitoring directory: #{directory_in}..." if verbose
+listener = Listen.to(directory_in) do |modified, added|
+  puts "File activity detected: #{added}" if verbose
+  added.each do |f|
+    fname = "#{prefix}_#{numbering.to_s.rjust(2,"0")}_#{File.basename(f)}#{ext}"
+    FileUtils.cp(f, File.join(directory_out, fname))
+    puts "Extracted: #{fname}"
+    numbering += 1
+  end
+end
+listener.start
+sleep
