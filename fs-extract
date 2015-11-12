@@ -5,6 +5,7 @@
 #/ -n, --numbering=N   Begin numbering at N
 #/ -p, --prefix=S      Prefix extracted files with S
 #/ -e, --ext=E         Add extension
+#/ -d, --delay=D       Wait after event before taking action (in seconds)
 #/ -v, --verbose
 #/ -h, --help
 $stderr.sync = true
@@ -18,6 +19,7 @@ numbering = 1
 verbose = false
 prefix = "Extracted"
 ext = nil
+delay = 0
 
 def help() exec "grep ^#/<'#{__FILE__}'|cut -c4-" end
 ARGV.options do |opts|
@@ -27,6 +29,7 @@ ARGV.options do |opts|
   opts.on("-n", "--numbering=n", Integer) { |val| numbering = val }
   opts.on("-p", "--prefix=p", String)     { |val| prefix = val.gsub(/[^0-9A-z.\-]/, '_') }
   opts.on("-e", "--ext=e", String)        { |val| ext = val }
+  opts.on("-d", "--delya=d", Integer)     { |val| delay = val }
   opts.on_tail("-h", "--help")            { help() }
   opts.parse!
 end
@@ -38,6 +41,8 @@ puts "Forcing #{ext} extension;" if verbose and ext
 puts "Monitoring directory: #{directory_in}..." if verbose
 listener = Listen.to(directory_in) do |modified, added|
   puts "File activity detected: #{added}" if verbose
+  puts "Waiting #{delay} seconds" if delay > 0 and verbose
+  sleep delay
   added.each do |f|
     fname = "#{prefix}_#{numbering.to_s.rjust(2,"0")}_#{File.basename(f)}#{ext}"
     FileUtils.cp(f, File.join(directory_out, fname))
