@@ -39,10 +39,9 @@ help() if directory_in.nil?
 puts "Starting numbering at #{numbering};" if verbose and numbering > 1
 puts "Forcing #{ext} extension;" if verbose and ext
 puts "Monitoring directory: #{directory_in}..." if verbose
-listener = Listen.to(directory_in) do |modified, added|
-  puts "File activity detected: #{added}" if verbose
-  puts "Waiting #{delay} seconds" if delay > 0 and verbose
-  sleep delay
+listener = Listen.to(directory_in, latency: 1, wait_for_delay: delay) do |added,modified|
+  puts "File activity detected: #{added} #{modified}" if verbose
+  added = added.concat(modified)
   added.each do |f|
     fname = "#{prefix}_#{numbering.to_s.rjust(2,"0")}_#{File.basename(f)}#{ext}"
     FileUtils.cp(f, File.join(directory_out, fname))
